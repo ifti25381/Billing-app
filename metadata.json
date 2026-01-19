@@ -1,0 +1,5 @@
+{
+  "name": "Copy of General Store Billing App",
+  "description": "A simple billing application for a general store, featuring product sections, a live bill summary, and billing history.",
+  "requestFramePermissions": []
+}
