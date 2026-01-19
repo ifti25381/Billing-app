@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Product, BillItem, Bill, CustomProduct } from './types'; // Import CustomProduct
+import { Product, BillItem, Bill, Section } from './types';
 import { SECTIONS, PRODUCTS } from './constants';
 import Navbar from './components/Navbar';
 import SectionDisplay from './components/SectionDisplay';
 import BillSummary from './components/BillSummary';
 import BillingHistory from './components/BillingHistory';
-import ManageCustomProducts from './components/ManageCustomProducts'; // Use the renamed component
+import AddNewProductForm from './components/AddNewProductForm'; // Renamed and simplified
+import ProductEditModal from './components/ProductEditModal'; // New component
 
 function App() {
   const [selectedSectionId, setSelectedSectionId] = useState<string>(SECTIONS[0].id);
   const [currentBillItems, setCurrentBillItems] = useState<BillItem[]>([]);
   const [billingHistory, setBillingHistory] = useState<Bill[]>([]);
-  const [customProducts, setCustomProducts] = useState<CustomProduct[]>([]); // New state for custom products
+  const [allProducts, setAllProducts] = useState<Product[]>([]); // Single source of truth for all products
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // State for editing modal
 
   // Load data from local storage on mount
   useEffect(() => {
@@ -20,9 +22,13 @@ function App() {
       if (savedHistory) {
         setBillingHistory(JSON.parse(savedHistory));
       }
-      const savedCustomProducts = localStorage.getItem('customProducts');
-      if (savedCustomProducts) {
-        setCustomProducts(JSON.parse(savedCustomProducts));
+
+      const savedProducts = localStorage.getItem('allProducts');
+      if (savedProducts) {
+        setAllProducts(JSON.parse(savedProducts));
+      } else {
+        // Initialize with predefined products if no saved products exist
+        setAllProducts(PRODUCTS);
       }
     } catch (error) {
       console.error("Failed to load data from local storage", error);
@@ -38,14 +44,14 @@ function App() {
     }
   }, [billingHistory]);
 
-  // Save custom products to local storage whenever it changes
+  // Save all products to local storage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('customProducts', JSON.stringify(customProducts));
+      localStorage.setItem('allProducts', JSON.stringify(allProducts));
     } catch (error) {
-      console.error("Failed to save custom products to local storage", error);
+      console.error("Failed to save all products to local storage", error);
     }
-  }, [customProducts]);
+  }, [allProducts]);
 
 
   const handleSelectSection = useCallback((sectionId: string) => {
@@ -76,32 +82,42 @@ function App() {
     });
   }, []);
 
-  // Custom product management callbacks
-  const handleAddCustomProduct = useCallback((name: string, price: number) => {
-    setCustomProducts((prevProducts) => {
-      const newId = `custom-prod-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      return [...prevProducts, { id: newId, name, price }];
+  // Product management callbacks
+  const handleAddNewProduct = useCallback((name: string, price: number, imageUrl: string, sectionId: string) => {
+    setAllProducts((prevProducts) => {
+      const newId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      return [...prevProducts, { id: newId, name, price, imageUrl, sectionId }];
     });
+    alert(`"${name}" added successfully!`);
   }, []);
 
-  const handleUpdateCustomProduct = useCallback((id: string, name: string, price: number) => {
-    setCustomProducts((prevProducts) =>
-      prevProducts.map((product) => (product.id === id ? { ...product, name, price } : product))
+  const handleUpdateProduct = useCallback((updatedProduct: Product) => {
+    setAllProducts((prevProducts) =>
+      prevProducts.map((product) => (product.id === updatedProduct.id ? updatedProduct : product))
     );
     // Also update current bill items if this product is already in the bill
     setCurrentBillItems((prevItems) =>
       prevItems.map((item) =>
-        item.productId === id
-          ? { ...item, productName: name, price: price, total: price * item.quantity }
+        item.productId === updatedProduct.id
+          ? {
+              ...item,
+              productName: updatedProduct.name,
+              price: updatedProduct.price,
+              total: updatedProduct.price * item.quantity,
+            }
           : item
       )
     );
+    alert(`"${updatedProduct.name}" updated successfully!`);
   }, []);
 
-  const handleDeleteCustomProduct = useCallback((id: string) => {
-    setCustomProducts((prevProducts) => prevProducts.filter((product) => product.id !== id));
-    // Also remove from current bill if present
-    setCurrentBillItems((prevItems) => prevItems.filter((item) => item.productId !== id));
+  const handleDeleteProduct = useCallback((productId: string, productName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+      setAllProducts((prevProducts) => prevProducts.filter((product) => product.id !== productId));
+      // Also remove from current bill if present
+      setCurrentBillItems((prevItems) => prevItems.filter((item) => item.productId !== productId));
+      alert(`"${productName}" deleted successfully!`);
+    }
   }, []);
 
 
@@ -161,29 +177,21 @@ function App() {
       />
 
       {/* Main Content Area */}
-      {/* Adjusted marginLeft for Navbar (w-48 = 192px) and marginRight for right panels (w-96 = 384px) */}
       <div className="flex-grow p-4 md:p-8 overflow-y-auto" style={{ marginLeft: '192px', marginRight: '384px' }}>
         <h1 className="text-4xl font-extrabold text-gray-900 mb-8">General Store Billing</h1>
         <SectionDisplay
-          products={PRODUCTS}
-          customProducts={customProducts} // Pass custom products
+          allProducts={allProducts} // Pass all products
           selectedSectionId={selectedSectionId}
           onAddItemToBill={handleAddItemToBill}
+          onEditProduct={setEditingProduct} // Set product to be edited
+          onDeleteProduct={handleDeleteProduct} // Pass delete handler
         />
       </div>
 
-      {/* Right Side Panels (Bill Summary & History) */}
+      {/* Right Side Panels (Bill Summary, History & Add New Product) */}
       <div className="fixed right-0 top-0 h-full w-96 flex flex-col bg-gray-100 shadow-xl z-20 p-4 overflow-y-auto">
-        {/* Manage Custom Items */}
-        <ManageCustomProducts
-          customProducts={customProducts}
-          onAddCustomProduct={handleAddCustomProduct}
-          onUpdateCustomProduct={handleUpdateCustomProduct}
-          onDeleteCustomProduct={handleDeleteCustomProduct}
-        />
-
         {/* Bill Summary */}
-        <div className="flex-1 mb-4 mt-4"> {/* Added mt-4 for spacing */}
+        <div className="flex-1 mb-4">
           <BillSummary
             billItems={currentBillItems}
             onUpdateQuantity={handleUpdateQuantity}
@@ -196,7 +204,25 @@ function App() {
         <div className="flex-1 mt-4">
           <BillingHistory history={billingHistory} />
         </div>
+        {/* Add New Product - Now at the bottom */}
+        <div className="flex-none mt-4">
+          <AddNewProductForm
+            sections={SECTIONS}
+            onAddNewProduct={handleAddNewProduct}
+          />
+        </div>
       </div>
+
+      {/* Product Edit Modal */}
+      {editingProduct && (
+        <ProductEditModal
+          product={editingProduct}
+          sections={SECTIONS}
+          onSave={handleUpdateProduct}
+          onDelete={handleDeleteProduct}
+          onClose={() => setEditingProduct(null)}
+        />
+      )}
     </div>
   );
 }

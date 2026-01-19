@@ -3,13 +3,7 @@ export interface Product {
   name: string;
   price: number;
   imageUrl: string;
-  sectionId: string;
-}
-
-export interface CustomProduct {
-  id: string;
-  name: string;
-  price: number;
+  sectionId: string; // The section this product belongs to
 }
 
 export interface Section {

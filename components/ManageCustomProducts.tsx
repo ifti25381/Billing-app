@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
-import { CustomProduct } from '../types';
+import { Product } from '../types'; // Fix: Changed CustomProduct to Product
 
 interface ManageCustomProductsProps {
-  customProducts: CustomProduct[];
+  customProducts: Product[]; // Fix: Changed CustomProduct to Product
   onAddCustomProduct: (name: string, price: number) => void;
   onUpdateCustomProduct: (id: string, name: string, price: number) => void;
   onDeleteCustomProduct: (id: string) => void;
@@ -27,7 +27,7 @@ const ManageCustomProducts: React.FC<ManageCustomProductsProps> = ({
     }
   }, [editingProductId, customProducts]);
 
-  const handleEditClick = (product: CustomProduct) => {
+  const handleEditClick = (product: Product) => {
     setItemName(product.name);
     setItemPrice(product.price.toString());
     setEditingProductId(product.id);
@@ -125,7 +125,7 @@ const ManageCustomProducts: React.FC<ManageCustomProductsProps> = ({
         <p className="text-gray-500 italic">No custom items added yet.</p>
       ) : (
         <ul className="divide-y divide-gray-200">
-          {customProducts.map((product) => (
+          {customProducts.map((product) => ( // Fix: Changed CustomProduct to Product
             <li key={product.id} className="py-3 flex justify-between items-center">
               <div>
                 <span className="font-medium text-gray-900">{product.name}</span>

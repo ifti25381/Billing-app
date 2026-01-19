@@ -1,47 +1,34 @@
 import React from 'react';
-import { Product, CustomProduct } from '../types'; // Import CustomProduct
+import { Product, Section } from '../types';
 import ProductCard from './ProductCard';
+import { SECTIONS } from '../constants'; // Import SECTIONS to get names
 
 interface SectionDisplayProps {
-  products: Product[];
-  customProducts: CustomProduct[]; // New prop for custom products
+  allProducts: Product[]; // Now receives all products
   selectedSectionId: string;
   onAddItemToBill: (product: Product) => void;
+  onEditProduct: (product: Product) => void; // New prop for editing
+  onDeleteProduct: (productId: string, productName: string) => void; // New prop for deleting
 }
 
 const SectionDisplay: React.FC<SectionDisplayProps> = ({
-  products,
-  customProducts, // Destructure customProducts
+  allProducts,
   selectedSectionId,
   onAddItemToBill,
+  onEditProduct,
+  onDeleteProduct,
 }) => {
-  let itemsToDisplay: Product[] = [];
-  let sectionTitle = '';
+  const itemsToDisplay = allProducts.filter(
+    (product) => product.sectionId === selectedSectionId
+  );
 
-  if (selectedSectionId === 'user-defined-items') {
-    // Map CustomProduct to Product for consistent rendering with ProductCard
-    itemsToDisplay = customProducts.map(cp => ({
-      id: cp.id,
-      name: cp.name,
-      price: cp.price,
-      imageUrl: 'https://picsum.photos/100/100?grayscale', // Generic image for custom items
-      sectionId: 'user-defined-items',
-    }));
-    sectionTitle = 'User-Defined Items';
-  } else {
-    itemsToDisplay = products.filter(
-      (product) => product.sectionId === selectedSectionId
-    );
-    sectionTitle = itemsToDisplay.length > 0
-      ? itemsToDisplay[0].sectionId.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-      : 'Products'; // Fallback if section has no products
-  }
-
+  const currentSection = SECTIONS.find(section => section.id === selectedSectionId);
+  const sectionTitle = currentSection ? currentSection.name : 'Products';
 
   if (!selectedSectionId) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500 text-xl">
-        Select a section from the right sidebar to view products.
+        Select a section from the left sidebar to view products.
       </div>
     );
   }
@@ -56,7 +43,13 @@ const SectionDisplay: React.FC<SectionDisplayProps> = ({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {itemsToDisplay.map((product) => (
-            <ProductCard key={product.id} product={product} onAddItemToBill={onAddItemToBill} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddItemToBill={onAddItemToBill}
+              onEditProduct={onEditProduct}
+              onDeleteProduct={onDeleteProduct}
+            />
           ))}
         </div>
       )}
